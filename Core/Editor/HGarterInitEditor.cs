@@ -27,6 +27,10 @@ public class HGarterInitEditor : Editor
 	{
 		HGarterInit init = (HGarterInit)target;
 
+		EditorGUILayout.BeginHorizontal ();
+		EditorGUILayout.HelpBox ("\nDo you see any issue in your Unity version or do you need a help with anything? -> vladimir@gamearter.com\n", MessageType.Info);
+		EditorGUILayout.EndHorizontal();
+
 		serializedObject.Update();
 		EditorGUILayout.PrefixLabel("");
 
@@ -42,11 +46,11 @@ public class HGarterInitEditor : Editor
 		EditorGUILayout.BeginHorizontal ();
 		init.active = (HGarterInit.Active)EditorGUILayout.EnumPopup ("Active?", (HGarterInit.Active)init.active);
 		EditorGUILayout.EndHorizontal();
+
 		int activeVal = (init.active == HGarterInit.Active.Yes ? 1 : 0);
 		using (var disactive = new EditorGUILayout.FadeGroupScope (activeVal)) {
 			if (!disactive.visible) {
 				EditorGUILayout.BeginHorizontal ();
-
 				EditorGUILayout.HelpBox ("GameArter SDK is being deactivated. Switch Active to Yes.", MessageType.Warning);
 				EditorGUILayout.EndHorizontal ();
 			} else {
@@ -54,7 +58,10 @@ public class HGarterInitEditor : Editor
 				EditorGUILayout.PrefixLabel("Project Id");
 				init.projectId = (uint)EditorGUILayout.IntField((int)init.projectId);
 				projectId = init.projectId;
+				if(GUILayout.Button("Get Id")) Application.OpenURL ("https://developers.gamearter.com/projects");
+				EditorGUILayout.EndHorizontal();
 
+				EditorGUILayout.BeginHorizontal ();
 				switch(init.projectVersion){
 				case HGarterInit.ProjectVersion.V1:
 					projectVer = 1;
@@ -72,11 +79,6 @@ public class HGarterInitEditor : Editor
 					projectVer = 5;
 					break;
 				}
-					
-				if(GUILayout.Button("Get Id")) Application.OpenURL ("https://developers.gamearter.com/projects");
-				EditorGUILayout.EndHorizontal();
-
-				EditorGUILayout.BeginHorizontal ();
 				EditorGUILayout.PropertyField (serializedObject.FindProperty ("projectVersion"), true);
 				EditorGUILayout.EndHorizontal ();
 
@@ -113,133 +115,121 @@ public class HGarterInitEditor : Editor
 				EditorGUILayout.EndHorizontal();
 
 				// ----- switching basic / full-lite -----
-				int basicSdk =  (init.sdk == HGarterInit.Sdk.Basic ? 0 : 1);
-				using (var itemsgroup = new EditorGUILayout.FadeGroupScope (basicSdk)) {
-					if (itemsgroup.visible) {
-						// ----- full & lite sdk -----
-						int sdkVal = (init.sdk == HGarterInit.Sdk.Full ? 1 : 0);
-						using (var itemsgroup1 = new EditorGUILayout.FadeGroupScope (sdkVal)) {
-							if (!itemsgroup1.visible) {
-								EditorGUILayout.BeginHorizontal ();
-								EditorGUILayout.PropertyField (serializedObject.FindProperty ("ingameCurrency"), true);
-								EditorGUILayout.EndHorizontal ();
-							}
-						}
+				if (init.sdk != HGarterInit.Sdk.Basic) {
+					// ----- full & lite sdk -----
+						
+					// EVENTS
+					EditorGUILayout.BeginHorizontal ();
+					EditorGUILayout.PropertyField (serializedObject.FindProperty ("events"), true);
+					EditorGUILayout.EndHorizontal ();
+				
+					// grouping
+					if (init.sdk == HGarterInit.Sdk.Full) { // FULL sdk
+						EditorGUILayout.BeginHorizontal ();
+						EditorGUILayout.PropertyField (serializedObject.FindProperty ("property"), true);
+						EditorGUILayout.EndHorizontal ();
 
+						EditorGUILayout.BeginHorizontal ();
+						GUILayout.Label ("Individual Data Save");
+						init.individual = EditorGUILayout.TextField (init.individual);
+						EditorGUILayout.EndHorizontal ();
+						// settings button
 						EditorGUILayout.PrefixLabel ("");
+						// feature box
 						EditorGUILayout.BeginHorizontal ();
-						EditorGUILayout.PropertyField (serializedObject.FindProperty ("events"), true);
+						EditorGUILayout.PropertyField (serializedObject.FindProperty ("featureBox"), true);
 						EditorGUILayout.EndHorizontal ();
 
-						using (var itemsgroup1 = new EditorGUILayout.FadeGroupScope (sdkVal)) {
-							if (itemsgroup1.visible) {
-								// ----- full sdk -----
-								EditorGUILayout.PrefixLabel("");
-								EditorGUILayout.BeginHorizontal ();
-								EditorGUILayout.PropertyField (serializedObject.FindProperty ("property"), true);
-								EditorGUILayout.EndHorizontal ();
+					} else { // lite SDK
+						EditorGUILayout.BeginHorizontal ();
+						EditorGUILayout.PropertyField (serializedObject.FindProperty ("ingameCurrency"), true);
+						EditorGUILayout.EndHorizontal ();
 
-								EditorGUILayout.BeginHorizontal ();
-								GUILayout.Label ("Individual Data Save");
-								init.individual = EditorGUILayout.TextField (init.individual);
-								EditorGUILayout.EndHorizontal ();
-								// settings button
-								EditorGUILayout.PrefixLabel ("");
-								// feature box
-								EditorGUILayout.BeginHorizontal ();
-								EditorGUILayout.PropertyField (serializedObject.FindProperty ("featureBox"), true);
-								EditorGUILayout.EndHorizontal ();
-							} else {
-								// ----- lite sdk -----
-								EditorGUILayout.PrefixLabel ("");
-								// features
-								EditorGUILayout.BeginHorizontal ();
-								EditorGUILayout.PropertyField (serializedObject.FindProperty ("gamearterFeatures"), true);
-								EditorGUILayout.EndHorizontal ();
-								// feature box
-								EditorGUILayout.BeginHorizontal ();
-								EditorGUILayout.PropertyField (serializedObject.FindProperty ("advancedFeatureBox"), true);
-								EditorGUILayout.EndHorizontal ();
-							}
-							// Progress module settings
-							int individualProgress = (init.progressModule.mode == HGarterInit.ProgressMode.None ? 0 : 1);
-							using (var itemsgroup2 = new EditorGUILayout.FadeGroupScope (individualProgress)) { // individual progress
-								if (itemsgroup2.visible) {
-									EditorGUILayout.BeginHorizontal ();
-									EditorGUILayout.PropertyField (serializedObject.FindProperty ("progressModule"), true);
-									EditorGUILayout.EndHorizontal ();
-								} else {
-									EditorGUILayout.BeginHorizontal ();
-									init.progressModule.mode = (HGarterInit.ProgressMode)EditorGUILayout.EnumPopup ("Progress Mode", (HGarterInit.ProgressMode)init.progressModule.mode);
-									EditorGUILayout.EndHorizontal();
+						// features
+						EditorGUILayout.BeginHorizontal ();
+						EditorGUILayout.PropertyField (serializedObject.FindProperty ("gamearterFeatures"), true);
+						EditorGUILayout.EndHorizontal ();
+
+						// feature box
+						EditorGUILayout.BeginHorizontal ();
+						EditorGUILayout.PropertyField (serializedObject.FindProperty ("advancedFeatureBox"), true);
+						EditorGUILayout.EndHorizontal ();
+					}
+							
+					// Progress module settings
+					EditorGUILayout.BeginHorizontal ();
+					if (init.progressModule.mode != HGarterInit.ProgressMode.None) {
+						EditorGUILayout.PropertyField (serializedObject.FindProperty ("progressModule"), true);
+					} else {
+						init.progressModule.mode = (HGarterInit.ProgressMode)EditorGUILayout.EnumPopup ("Progress Mode", (HGarterInit.ProgressMode)init.progressModule.mode);
+					}
+					EditorGUILayout.EndHorizontal();
+					
+					// external box config
+					EditorGUILayout.BeginHorizontal ();
+					EditorGUILayout.PropertyField (serializedObject.FindProperty ("minimumTimescale"), true);
+					EditorGUILayout.EndHorizontal ();
+					EditorGUILayout.BeginHorizontal ();
+					EditorGUILayout.PropertyField (serializedObject.FindProperty ("autoSaving"), true);
+					EditorGUILayout.EndHorizontal ();
+					EditorGUILayout.BeginHorizontal ();
+					EditorGUILayout.PropertyField (serializedObject.FindProperty ("analyticsMode"), true);
+					EditorGUILayout.EndHorizontal();
+
+					EditorGUILayout.PrefixLabel("");
+					// ----- Export data -----
+					EditorGUILayout.BeginHorizontal ();
+					EditorGUILayout.HelpBox ("\nOnce you are complete with filling the data, or you updated some data, pres PLAY button and then Export the data on server.\n", MessageType.Info);
+					if (GUILayout.Button ("\nExport to Server\n(in play mode only)\n")) {
+
+						// Export settings
+						bool errorInData = false;
+
+						List<string> stackDataList = new List<string> ();
+						char interpreter = GetInterpreter(init.sdk.ToString ());
+
+						// ----- EVENTS ----- //
+						string eJSON = Garter.I.ToJson<HGarterInit.Events[]> (init.events);
+
+						int eventsLength = 0;
+						int groupsLength = init.events.Length;
+						HashSet<string> groupNameDuplicity = new HashSet<string> ();
+						for (int i = 0; i < groupsLength; i++) {
+							eventsLength += init.events [i].groupEvents.Length;
+							groupNameDuplicity.Add (init.events [i].groupName);
+						}
+						if (groupNameDuplicity.Count != groupsLength) {
+							errorInData = true;
+							Debug.LogError ("Duplicity in event group name");
+						}
+						string[] eventsNames = new string[eventsLength];
+						decimal[] eInitValue = new decimal[eventsLength];
+						string[] eTrend = new string[eventsLength];
+
+						int eventIndex = 0;
+						for (int i = 0; i < groupsLength; i++) {
+							int eLength = init.events [i].groupEvents.Length;
+							for (int j = 0; j < eLength; j++) {
+								eventsNames [eventIndex] = init.events [i].groupEvents [j].nameId;
+								eInitValue [eventIndex] = (decimal)init.events [i].groupEvents [j].initialValue;
+								eTrend [eventIndex] = init.events [i].groupEvents [j].trend.ToString();
+
+								if (eTrend [eventIndex] == "Decreasing" && eInitValue [eventIndex] <= 0) {
+									errorInData = true;
+									Debug.LogError ("GARTER | event " + eventsNames [eventIndex] + " | Initial value must be higher than 0");
+								} else if (eInitValue [eventIndex] < 0) {
+									Debug.LogError ("GARTER | event values | event " + eventsNames [eventIndex] + " | Initial value must be higher or equal 0");
 								}
+								eventIndex++;
 							}
 						}
-						// external box config
-						EditorGUILayout.BeginHorizontal ();
-						EditorGUILayout.PropertyField (serializedObject.FindProperty ("minimumTimescale"), true);
-						EditorGUILayout.EndHorizontal ();
-						EditorGUILayout.BeginHorizontal ();
-						EditorGUILayout.PropertyField (serializedObject.FindProperty ("autoSaving"), true);
-						EditorGUILayout.EndHorizontal ();
-						EditorGUILayout.BeginHorizontal ();
-						EditorGUILayout.PropertyField (serializedObject.FindProperty ("analyticsMode"), true);
-						EditorGUILayout.EndHorizontal();
-
-						EditorGUILayout.PrefixLabel("");
-						// ----- Export data -----
-						EditorGUILayout.BeginHorizontal ();
-						EditorGUILayout.HelpBox ("\nOnce you are complete with filling the data, or you updated some data, pres PLAY button and then Export the data on server.\n", MessageType.Info);
-						if (GUILayout.Button ("\nExport to Server\n(in play mode only)\n")) {
-
-							// Export settings
-							bool errorInData = false;
-
-							List<string> stackDataList = new List<string> ();
-							char interpreter = GetInterpreter(init.sdk.ToString ());
-
-							// ----- EVENTS ----- //
-							string eJSON = Garter.I.ToJson<HGarterInit.Events[]> (init.events);
-
-							int eventsLength = 0;
-							int groupsLength = init.events.Length;
-							HashSet<string> groupNameDuplicity = new HashSet<string> ();
-							for (int i = 0; i < groupsLength; i++) {
-								eventsLength += init.events [i].groupEvents.Length;
-								groupNameDuplicity.Add (init.events [i].groupName);
-							}
-							if (groupNameDuplicity.Count != groupsLength) {
-								errorInData = true;
-								Debug.LogError ("Duplicity in event group name");
-							}
-							string[] eventsNames = new string[eventsLength];
-							decimal[] eInitValue = new decimal[eventsLength];
-							string[] eTrend = new string[eventsLength];
-
-							int eventIndex = 0;
-							for (int i = 0; i < groupsLength; i++) {
-								int eLength = init.events [i].groupEvents.Length;
-								for (int j = 0; j < eLength; j++) {
-									eventsNames [eventIndex] = init.events [i].groupEvents [j].nameId;
-									eInitValue [eventIndex] = (decimal)init.events [i].groupEvents [j].initialValue;
-									eTrend [eventIndex] = init.events [i].groupEvents [j].trend.ToString();
-
-									if (eTrend [eventIndex] == "Decreasing" && eInitValue [eventIndex] <= 0) {
-										errorInData = true;
-										Debug.LogError ("GARTER | event " + eventsNames [eventIndex] + " | Initial value must be higher than 0");
-									} else if (eInitValue [eventIndex] < 0) {
-										Debug.LogError ("GARTER | event values | event " + eventsNames [eventIndex] + " | Initial value must be higher or equal 0");
-									}
-									eventIndex++;
-								}
-							}
 								
-							//#if UNITY_EDITOR && UNITY_WEBGL
-							//Check inserted values
-							if (init.projectId == 0) {
-								errorInData = true;
-								Debug.LogError ("Project Id cannot be 0");
-							}
+						//#if UNITY_EDITOR && UNITY_WEBGL
+						//Check inserted values
+						if (init.projectId == 0) {
+							errorInData = true;
+							Debug.LogError ("Project Id cannot be 0");
+						}
 
 
 							// if decreasing trend -> initial value cannot be 0
@@ -511,14 +501,14 @@ public class HGarterInitEditor : Editor
 							Application.OpenURL ("https://developers.gamearter.com/projects");
 						}
 						EditorGUILayout.EndHorizontal ();
-
-
+						
 					} else {
 						// ----- basic sdk -----
 						EditorGUILayout.PrefixLabel ("");
 						// feature box
 						EditorGUILayout.BeginHorizontal ();
 						EditorGUILayout.PropertyField (serializedObject.FindProperty ("featureBox"), true);
+						//init.featureBox.settingsButton = (HGarterInit.BtnVisibility)EditorGUILayout.EnumPopup ("Settings vutton visibility", (HGarterInit.BtnVisibility)init.featureBox.settingsButton);
 						EditorGUILayout.EndHorizontal ();
 						EditorGUILayout.BeginHorizontal ();
 						EditorGUILayout.PropertyField (serializedObject.FindProperty ("minimumTimescale"), true);
@@ -542,7 +532,6 @@ public class HGarterInitEditor : Editor
 						}
 						EditorGUILayout.EndHorizontal ();
 					}
-				}
 			}
 		}
 		//end of active / deactive sdk

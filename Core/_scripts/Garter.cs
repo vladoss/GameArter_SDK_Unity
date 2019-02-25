@@ -624,47 +624,65 @@ public class Garter : MonoBehaviour {
 	/// <param name="callback">Callback.</param>
 	/// <typeparam name="T">The 1st type parameter.</typeparam>
 	public T GetData<T>(string key, Action<string,T> callback = null){
-		if (individualSaveData.ContainsKey(key)) {
-			Type dataType = individualSaveData [key].GetType ();
-			Type requestedDataType = typeof(T);
-			if (dataType.Equals (requestedDataType)) {
-				if (callback != null) callback (null, (T)individualSaveData [key]);
-				return (T)individualSaveData [key];
-			} else {
-				//Debug.Log (dataType.Name+" vs "+requestedDataType.Name);
-				T value;
-				try{
-					value = ((T)Convert.ChangeType(individualSaveData [key], typeof(T)));
-					if (callback != null) callback (null, value);
-					return value;
-				} catch {
-					try{
-						string stringTest = individualSaveData [key].ToString ();
-						value = JsonConvert.DeserializeObject<T> (stringTest);
-						if (callback != null) callback (null, value);
+		if (!interpreter.Equals ('B')) {
+			if (individualSaveData.ContainsKey (key)) {
+				Type dataType = individualSaveData [key].GetType ();
+				Type requestedDataType = typeof(T);
+				if (dataType.Equals (requestedDataType)) {
+					if (callback != null)
+						callback (null, (T)individualSaveData [key]);
+					return (T)individualSaveData [key];
+				} else {
+					//Debug.Log (dataType.Name+" vs "+requestedDataType.Name);
+					T value;
+					try {
+						value = ((T)Convert.ChangeType (individualSaveData [key], typeof(T)));
+						if (callback != null)
+							callback (null, value);
 						return value;
-					} catch(Exception e1){
-						Debug.LogWarning ("Garter | Parsing failed, defautl value returned");
-						if (callback != null) callback (e1.ToString(), default(T));
-						return default(T);
+					} catch {
+						try {
+							string stringTest = individualSaveData [key].ToString ();
+							value = JsonConvert.DeserializeObject<T> (stringTest);
+							if (callback != null)
+								callback (null, value);
+							return value;
+						} catch (Exception e1) {
+							Debug.LogWarning ("Garter | Parsing failed, defautl value returned");
+							if (callback != null)
+								callback (e1.ToString (), default(T));
+							return default(T);
+						}
 					}
 				}
+			} else {
+				if (callback != null)
+					callback (null, default(T));
+				return default(T);
 			}
 		} else {
-			if (callback != null) callback (null, default(T));
+			Debug.LogError ("Storage feature is not available in Basic SDK mode");
+			if (callback != null) callback ("Storage feature is not available in Basic SDK mode", default(T));
 			return default(T);
 		}
 	}
 
 	public void PostData<T>(string key, T value, Action<string, string> callback = null){ // called manually from liteSDK
-		string addOnListErr = SetIndividualGameData<T> (key, value);
-		if (string.IsNullOrEmpty (addOnListErr)) {
-			StartCoroutine (SafePostRequest (true, false, (error, response) => {
+		if (!interpreter.Equals ('B')) {
+			string addOnListErr = SetIndividualGameData<T> (key, value);
+			if (string.IsNullOrEmpty (addOnListErr)) {
+				StartCoroutine (SafePostRequest (true, false, (error, response) => {
+					if (callback != null)
+						callback (error, response);
+				}));
+			} else {
 				if (callback != null)
-					callback (error, response);
-			}));
+					callback (addOnListErr, null);
+			}
 		} else {
-			if(callback != null) callback (addOnListErr, null);
+			Debug.LogError ("Storage feature is not available in Basic SDK mode");
+			if (callback != null)
+				callback ("Storage feature is not available in Basic SDK mode", null);
 		}
 	}
 
@@ -1378,6 +1396,7 @@ public class Garter : MonoBehaviour {
 				if (!Application.isEditor) {
 					string host = new System.Uri (Application.absoluteURL).Host;
 					Log ("info","G host: " + host+" | Illegal running: "+protection.UrlProtection (host));
+					if (protection.UrlProtection (host)) Debug.LogWarning ("PP is being disabled by developer");
 					if ((bool)initializeData[5] && protection.UrlProtection (host)) { // block game
 						BlockGame ("illegal host");
 						SceneManager.LoadScene (0);
