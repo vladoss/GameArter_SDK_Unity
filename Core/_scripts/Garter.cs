@@ -102,6 +102,7 @@ public class Garter : MonoBehaviour {
 	private bool openingWebShop = false; // waiting for save callback before opening a shop (full sdk)
 
 	private string _PWAStatus = "disabled";
+	private bool _isActiveTab = true;
 
 	ServicesAdjustment servicesAdjustment = new ServicesAdjustment ();
 	HGarterGui gui = new HGarterGui ();
@@ -150,6 +151,19 @@ public class Garter : MonoBehaviour {
 	public bool RewardedAdsAvailability(){
 		return rewardedAdsEnabled;
 	}
+
+	// ACTIVE BROWSER TAB MONITOR
+	/// <summary>
+	/// Get current state of browser tab
+	/// </summary>
+	/// <returns><c>true</c> if browser tab with game is active; otherwise, <c>false</c>.</returns>
+	public bool IsActiveTab(){
+		return _isActiveTab;
+	}
+	public void ActiveTabMonitor(int state){
+		if (sdkInitialiized) ForwardExternalCb (ExternalListener.ActiveTabMonitor, ((state == 2) ? "active" : "inactive"));
+	}
+
 		
 	private void UpdateGarterGUIifAvailable(){
 		// ----- Update dashboard ----- 
@@ -1473,9 +1487,9 @@ public class Garter : MonoBehaviour {
 		if (playerData.a == 1) activityService = true; // enable game activity tracking
 		if (!string.IsNullOrEmpty(playerData.na)) networkAuthentication = playerData.na; // set network authentication
 		if(!string.IsNullOrEmpty(playerData.ni)) networkUniqueIdentificator = playerData.ni; // set network unique id
-		if(!string.IsNullOrEmpty(playerData.pw)) {
-			_PWAStatus = playerData.pw; // progressive web app status
-		}
+		if(!string.IsNullOrEmpty(playerData.pw)) _PWAStatus = playerData.pw; // progressive web app status
+		if (playerData.at != 0) _isActiveTab = (playerData.at == 2);
+		
 
 		rewardedAdsEnabled = playerData.ra;
 		iHash = playerData.h; //protecting userId, attach to server call
@@ -1495,7 +1509,7 @@ public class Garter : MonoBehaviour {
 		//load user image - asyncCallback 2
 		DownloadDataFile(playerData.pu, result => SetUserImage(result)); 
 	}
-		
+	/*	
 	/// <summary>
 	/// Encodes a string to be represented as a string literal. The format
 	/// is essentially a JSON string.
@@ -1551,7 +1565,7 @@ public class Garter : MonoBehaviour {
 
 		return sb.ToString();
 	}
-
+	*/
 
 	// ------------------------------- End Of Initialize ----------------------------- //
 		
@@ -2488,13 +2502,10 @@ public class Garter : MonoBehaviour {
 
 	private void OnApplicationFocus( bool hasFocus )
 	{
+		if(debugMode) Debug.Log ("OnApplicationFocus: "+hasFocus);
 		if (activityService) {
 			//SdkWindowClosed ("ad");
-			if (!editorMode) {
-				browserServices.ActivityPing(1);
-			} else {
-				//Debug.Log ("Browser Services | Game is active");
-			}
+			if (!editorMode) browserServices.ActivityPing(1);
 		}
 	}
 	private void OnApplicationPause( bool pauseStatus )
@@ -2502,15 +2513,10 @@ public class Garter : MonoBehaviour {
 		if(debugMode) Debug.Log ("OnApplicationPause: "+pauseStatus);
 		if (activityService) {
 			//OpenSdkWindow ("ad");
-			if (!editorMode) {
-				browserServices.ActivityPing(0);
-			} else {
-				//Debug.Log ("Browser Services | Game is not active");
-			}
+			if (!editorMode) browserServices.ActivityPing(0);
 		}
 			
 		if (interpreter.Equals ('F') && autoSaveEnabled) {
-		
 			if (userAuthentizationState == 2) {
 			
 			} else {
@@ -2599,7 +2605,7 @@ public class Garter : MonoBehaviour {
 		PossibleGameExit,
 		RewarededAdState,
 		PWAState,
-
+		ActiveTabMonitor
 	}
 
 	private Dictionary<ExternalListener, Delegate> externalCallbacksListeners = new Dictionary<ExternalListener, Delegate>(); // callback received from 3-rd party call
@@ -2922,7 +2928,8 @@ public class Garter : MonoBehaviour {
 		public string na; // network protection
 		public string ni; // network unique identificator
 		public string pw; // progressiveWebApp
-		public WebglPlData(uint userId, string[] user, string photoUrl, float[] userData, float userProgress, byte ban, float userStars, byte individualGameMode, byte[] saveFrequency, string hash, string[] starsColors, string[] ranks, string outgoingLink, byte outgoingLinks, string referrer, string serverUrl, string[] logoNames, string browserName, byte activityService, bool rewardedAdsEnabled, string networkAuthentication, string networkUniqueIdentificator, string progressiveWebAppState){
+		public byte at; // active tab
+		public WebglPlData(uint userId, string[] user, string photoUrl, float[] userData, float userProgress, byte ban, float userStars, byte individualGameMode, byte[] saveFrequency, string hash, string[] starsColors, string[] ranks, string outgoingLink, byte outgoingLinks, string referrer, string serverUrl, string[] logoNames, string browserName, byte activityService, bool rewardedAdsEnabled, string networkAuthentication, string networkUniqueIdentificator, string progressiveWebAppState, byte activeTab){
 			this.i = userId;
 			this.u = user;
 			this.pu = photoUrl; 
@@ -2945,6 +2952,7 @@ public class Garter : MonoBehaviour {
 			this.na = networkAuthentication;
 			this.ni = networkUniqueIdentificator;
 			this.pw = progressiveWebAppState;
+			this.at = activeTab;
 		}
 	}
 		

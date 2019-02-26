@@ -11,6 +11,7 @@ public class GarterBasicCallbacks : MonoBehaviour {
 		Garter.I.AddExternalCbListener<GarterWWW>(Garter.ExternalListener.SdkInitialized, SdkInitialized);
 		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.RewarededAdState, RewardedAdCallback);
 		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.ExternalSettingsButtonPressed, SettingsButtonPressed);
+		Garter.I.AddExternalCbListener<string> (Garter.ExternalListener.ActiveTabMonitor, ActiveTabMonitor);
 
 		buttonInstallAsApp = GameObject.Find ("3.11 Install As Web App"); // Save button
 		ProgressiveWebAppState (Garter.I.GetStatePWA()); // Hide Button
@@ -49,5 +50,9 @@ public class GarterBasicCallbacks : MonoBehaviour {
 				buttonInstallAsApp.SetActive(false);
 			}
 		}
+	}
+
+	private void ActiveTabMonitor(string state){
+		Debug.Log ("Browser tab with game is " + state);
 	}
 }
