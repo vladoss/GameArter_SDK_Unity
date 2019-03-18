@@ -14,7 +14,6 @@ public class DataManagerExample : MonoBehaviour {
 		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.ExternalSettingsButtonPressed, SettingsButtonPressed);
 		Garter.I.AddExternalCbListener<string[]>(Garter.ExternalListener.ReceivedBadges, BadgeReceived);
 		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.PossibleGameExit, PossibleGameExit);
-		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.RewarededAdState, RewardedAdCallback);
 
 		// Dont destroy on load - variables and functions will be available in every scene
 		DontDestroyOnLoad(transform.gameObject);

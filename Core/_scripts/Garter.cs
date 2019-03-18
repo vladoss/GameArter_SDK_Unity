@@ -5,6 +5,7 @@ using System.Collections;
 using UnityEngine.SceneManagement;
 
 //data sending
+using UnityEngine.Networking;
 using System.Text; //encoding
 using System.Collections.Generic;
 
@@ -15,11 +16,11 @@ using GarterProtection;
 using UnityEngine.UI;
 
 public class Garter : MonoBehaviour {
-	readonly string sdkVersion = "2.2";
+	readonly string sdkVersion = "2.4";
 	private static string serverAddress = "https://api.gamearter.com/game/sdk/1";  //PRODUCTION (cypher)
 	//private static string serverAddress = "https://api.gamearter.com/test/sdk/1"; // DEV TESTNET
 
-	private bool sdkInitialiized = false;
+	private bool sdkInitialized = false;
 	private bool debugMode = false;
 
 	private bool editorMode = false;
@@ -157,11 +158,11 @@ public class Garter : MonoBehaviour {
 	/// Get current state of browser tab
 	/// </summary>
 	/// <returns><c>true</c> if browser tab with game is active; otherwise, <c>false</c>.</returns>
-	public bool IsActiveTab(){
-		return _isActiveTab;
+	public string GetBrowserTabState(){
+		return (_isActiveTab) ? "active" : "inactive";
 	}
 	public void ActiveTabMonitor(int state){
-		if (sdkInitialiized) ForwardExternalCb (ExternalListener.ActiveTabMonitor, ((state == 2) ? "active" : "inactive"));
+		if (sdkInitialized) ForwardExternalCb (ExternalListener.ActiveTabMonitor, ((state == 2) ? "active" : "inactive"));
 	}
 
 		
@@ -211,6 +212,11 @@ public class Garter : MonoBehaviour {
 		}
 		return (localCurrency - lcKey);
 	}
+
+	public decimal LocalCurrencyAbs(decimal absoluteValue){
+		return LocalCurrency(absoluteValue - localCurrency - lcKey);
+	}
+
 	private void SetLocalCurrency(decimal funds){ // after calling this, checksum must be recounted
 		localCurrency = (funds + lcKey);
 	}
@@ -235,7 +241,7 @@ public class Garter : MonoBehaviour {
 	/// </summary>
 	private void GetProgressDataReq<T>(_ConnReqType type, Action<T> callback){
 		Log("info","Get Data request | type: "+type.ToString());
-		string notifyMsg = "Loading data from storage...";
+		string notifyMsg = "Loading data...";
 		string url = serverAddress;
 		switch (type) {
 		case _ConnReqType.INIT:
@@ -248,7 +254,7 @@ public class Garter : MonoBehaviour {
 			break;
 		}
 		NotificationModule (new object[]{false, notifyMsg});
-		ServerConnJson<T> (url, SaveToString(new Identification (sdkVersion, GameId(), projectVersion, UserId(), iHash, interpreter)), callback);
+		StartCoroutine (ServerConnJson<T> (url, SaveToString(new Identification (sdkVersion, GameId(), projectVersion, UserId(), iHash, interpreter)), callback));
 
 		// u Guesta pouze prvni req, ktery je automaticky...
 	}
@@ -257,7 +263,7 @@ public class Garter : MonoBehaviour {
 	public void ExportData<T>(string data, Action<T> callback){
 		NotificationModule (new object[]{false, "Exporting data..."});
 		string url = serverAddress;
-		ServerConnJson<T> ((url += "/export"), SaveToString(new Identification (sdkVersion, GameId(), projectVersion, UserId(), data, interpreter)), callback);
+		StartCoroutine (ServerConnJson<T> ((url += "/export"), SaveToString(new Identification (sdkVersion, GameId(), projectVersion, UserId(), data, interpreter)), callback));
 		gui.IlustrateBrowserBox("clear", "Consider to clear saved user data to prevent errors (button available in Garter_initialized obj.");
 	}
 
@@ -269,15 +275,15 @@ public class Garter : MonoBehaviour {
 			NotificationModule (new object[]{false, "Removing data..."});
 			if (userAuthentizationState == 2) {
 				string url = serverAddress;
-				ServerConnJson<T> ((url+= "/del"), SaveToString(new Identification (sdkVersion, GameId(), projectVersion, UserId(), iHash, interpreter)), callback);
+				StartCoroutine (ServerConnJson<T> ((url+= "/del"), SaveToString(new Identification (sdkVersion, GameId(), projectVersion, UserId(), iHash, interpreter)), callback));
 			} else if (userAuthentizationState == 1){
 				playerPrefs.Clear (GameId().ToString(), projectVersion.ToString());
-				callback ((T)Convert.ChangeType(new GarterWWW("ok",null,null), typeof(T))); //return callback
+				callback ((T)Convert.ChangeType(new GarterWWW("ok",null), typeof(T))); //return callback
 			} else {
-				callback ((T)Convert.ChangeType(new GarterWWW(null,"Unknown user",null), typeof(T))); //return callback
+				callback ((T)Convert.ChangeType(new GarterWWW(null,"Unknown user"), typeof(T))); //return callback
 			}
 		} else {
-			callback ((T)Convert.ChangeType(new GarterWWW(null,"Please, log in first to specify what user data to clear.",null), typeof(T))); //return callback
+			callback ((T)Convert.ChangeType(new GarterWWW(null,"Please, log in first to specify what user data to clear."), typeof(T))); //return callback
 		}
 	}
 		
@@ -293,11 +299,11 @@ public class Garter : MonoBehaviour {
 			string url = serverAddress+"/sync";
 			string dataWrapper = SaveToString (new _ServerObjPost (sdkVersion, GameId(), projectVersion, UserId(), hash, interpreter, data)); // data type post
 
-			ServerConnJson<WWW> (url, dataWrapper, (wwwResp) => {
+			StartCoroutine (ServerConnJson<UnityWebRequest> (url, dataWrapper, (wwwResp) => {
 				// unwrap
-				UnwrapProgressSyncReq(wwwResp.error, wwwResp.text);
+				UnwrapProgressSyncReq(wwwResp.error, wwwResp.downloadHandler.text);
 				callback(wwwResp.error, "ok");
-			});
+			}));
 		} else { // --- PLAYERPREFS --- //
 			playerPrefs.SetGameData (GameId().ToString(), projectVersion.ToString(), data, hash, events); // unwrapping is not necessary (no response)
 
@@ -382,9 +388,7 @@ public class Garter : MonoBehaviour {
 	private void UnwrapProgressError(string error, string responseData){
 		Debug.LogError (error + " | " + responseData);
 		NotificationModule (new object[]{ true, "Error - Server is down" });
-		if (!sdkInitialiized) {
-			GameInitialized (error);
-		}
+		if (!sdkInitialized) GameInitialized (error);
 	}
 
 	private void UnwrapProgressGetReq(_ConnReqType type, string error, string responseData){ // Init / Editor / Shop(on close)
@@ -682,7 +686,7 @@ public class Garter : MonoBehaviour {
 	}
 
 	public void PostData<T>(string key, T value, Action<string, string> callback = null){ // called manually from liteSDK
-		if (!interpreter.Equals ('B')) {
+		if (sdkInitialized && !interpreter.Equals ('B')) {
 			string addOnListErr = SetIndividualGameData<T> (key, value);
 			if (string.IsNullOrEmpty (addOnListErr)) {
 				StartCoroutine (SafePostRequest (true, false, (error, response) => {
@@ -694,14 +698,15 @@ public class Garter : MonoBehaviour {
 					callback (addOnListErr, null);
 			}
 		} else {
-			Debug.LogError ("Storage feature is not available in Basic SDK mode");
+			string errMsg = (!sdkInitialized) ? "SDK is not fully initialized yet. Wait for sdkInitialized listener." : "Storage feature is not available in Basic SDK mode";
+			Debug.LogError (errMsg);
 			if (callback != null)
-				callback ("Storage feature is not available in Basic SDK mode", null);
+				callback (errMsg, null);
 		}
 	}
 
 	public string SetIndividualGameData<T>(string key, T value){
-		if (userAuthentizationState != 0) {
+		if (sdkInitialized && userAuthentizationState != 0) {
 			// add / rewrite (RAM LAYER (keep up to date))
 			if (individualSaveData.ContainsKey(key)) {
 				individualSaveData [key] = value;
@@ -712,14 +717,18 @@ public class Garter : MonoBehaviour {
 			if(!idKeysToSync.Contains(key)) idKeysToSync.Add (key);
 			return null;
 		} else {
-			return "Unknown user. No user is logged in.";
+			return (!sdkInitialized) ? "SDK is not initialized yet" : "Unknown user. No user is logged in.";
 		}
 	}
 
 	public void ClearDataKey<T>(string key, Action<string, T> callback = null){
-		PostData<T> (key, default(T), (error, response) => {
-			if (callback != null) callback (error, default(T));
-		});
+		if (sdkInitialized) {
+			PostData<T> (key, default(T), (error, response) => {
+				if (callback != null) callback (error, default(T));
+			});
+		} else {
+			if (callback != null) callback ("Sdk is not initialized yet", default(T));
+		}
 	}
 	// -------------------- data management end ------------------------------------ //
 
@@ -775,11 +784,12 @@ public class Garter : MonoBehaviour {
 	}
 		
 	// ---------------------------------- Micro features ------------------------------------- //
-	private void SetUserImage(WWW www){
+	private void SetUserImage(UnityWebRequest www){
+		Debug.Log ("SetUserImage");
 		if (!string.IsNullOrEmpty(www.error)) {
 			Debug.LogWarning("UserPhoto ERR | "+www.error);
 		} else {
-			userPicture = www.texture;
+			userPicture = ((DownloadHandlerTexture)www.downloadHandler).texture;
 			UpdateUserBoard ();
 		}
 		asyncCallbacks--; // async operation of downloading game data and user image
@@ -1000,20 +1010,19 @@ public class Garter : MonoBehaviour {
 	}*/
 		
 	public void PostDataManually(){
-		StartCoroutine (SafePostRequest (true, true, null));
+		if(sdkInitialized) StartCoroutine (SafePostRequest (true, true, null));
 	}
 		
 	#if UNITY_EDITOR
 	public void HEditorClearUserdata<T>(Action<T> callback){
 		if(iHash != null){
 			playerPrefs.Clear (GameId().ToString(), projectVersion.ToString());
-			ClearData <WWW> ((wwwResp) => {
-				callback ((T)Convert.ChangeType(new GarterWWW(wwwResp.text,wwwResp.error,null), typeof(T))); //return callback
+			ClearData <UnityWebRequest> ((wwwResp) => {
+				callback ((T)Convert.ChangeType(new GarterWWW(wwwResp.downloadHandler.text,wwwResp.error), typeof(T))); //return callback
 			});
 		} else {
-			callback ((T)Convert.ChangeType(new GarterWWW(null,"Please, log in first to authetizate. (Securty reason)",null), typeof(T))); //return callback
+			callback ((T)Convert.ChangeType(new GarterWWW(null,"Please, log in first to authetizate. (Securty reason)"), typeof(T))); //return callback
 		}
-		
 	}
 	public void HEditorAllGuestData(){
 		string[] eventsPP = playerPrefs.GetSaveEvents(GameId().ToString(), projectVersion.ToString());
@@ -1037,22 +1046,25 @@ public class Garter : MonoBehaviour {
 	/// </summary>
 	public void ClearDataUserConfirm(){ // confirmation of clear user data request - clear the data
 		Log("info","ClearDataUserConfirm");
+		ClearData <UnityWebRequest> ((wwwResp) => {
+			if(string.IsNullOrEmpty(wwwResp.error)){
+				if (wwwResp.downloadHandler.text == "ok") {
+					gui.IlustrateBrowserBox ("clear", "Data was successfully cleared.");
+					#if UNITY_EDITOR
+					UnityEditor.EditorApplication.isPlaying = false;
+					#endif
 
-		ClearData <WWW> ((wwwResp) => {
-			if (wwwResp.text == "ok") {
-				gui.IlustrateBrowserBox ("clear", "Data was successfully cleared.");
-				#if UNITY_EDITOR
-				UnityEditor.EditorApplication.isPlaying = false;
-				#endif
+					if (!editorMode) {
+						browserServices.GameRestart ();
+					} else {
+						// restart window for localhost / file://
+					}
 
-				if (!editorMode) {
-					browserServices.GameRestart ();
 				} else {
-					// restart window for localhost / file://
+					gui.IlustrateBrowserBox ("error", "Ohh, something went wrong.");
 				}
-
 			} else {
-				gui.IlustrateBrowserBox ("error", "Ohh, something went wrong.");
+				Log("error", wwwResp.error);
 			}
 		});
 	}
@@ -1062,8 +1074,18 @@ public class Garter : MonoBehaviour {
 	/// </summary>
 	/// <param name="url">URL.</param>
 	/// <param name="callback">Callback.</param>
-	public void DownloadDataFile(string url, Action<WWW> callback){
-		if(!string.IsNullOrEmpty(url)) ServerConnFile (url, callback);
+	public enum FileType
+	{
+		Texture,
+		AssetBundle
+	}
+
+	public void DownloadDataFile(string url, FileType filetype, Action<UnityWebRequest> callback){
+		if (!string.IsNullOrEmpty (url)) {
+			StartCoroutine (ServerConnFile (url, filetype, callback));
+		} else {
+			Log ("error", "url of file to download cannot be empty");
+		}
 	}
 
 	public enum AssetsManagementType
@@ -1098,34 +1120,34 @@ public class Garter : MonoBehaviour {
 			break;
 		}
 		string dataWrapper = SaveToString (new _ServerObjPost (sdkVersion, GameId(), projectVersion, UserId(), hash, interpreter, data));
-		ServerConnJson<T> (url, dataWrapper, callback);
+		StartCoroutine (ServerConnJson<T> (url, dataWrapper, callback));
 	}
-
+		
 	//SERVER MODULE START
-	private void ServerConnFile<T> (string url, Action<T> callback)  //1 - get, 2 - set, 0 - get img (sometimes, data = hash);
-	{
-		WWW www = new WWW (url);
-		StartCoroutine (ServerCallback<T> (www, callback));
-	}
-
-	private Dictionary<string, string> headers = null;
-	private void ServerConnJson<T> (string url, string data, Action<T> callback){
-		WWWForm form = new WWWForm ();
-		headers = form.headers;
-		headers ["Content-Type"] = "application/json";
-		headers ["Accept"] = "application/json";
-		WWW www = new WWW (url, Encoding.UTF8.GetBytes (data), headers);
-		StartCoroutine (ServerCallback<T> (www, callback));
-	}
-
-	private IEnumerator ServerCallback<T>(WWW www, Action<T> callback)
-	{
-		yield return www;
-		if (typeof(T).FullName == "UnityEngine.WWW") {
-			callback ((T)Convert.ChangeType(www, typeof(T)));
-		} else { // - transport callback (LiteSDK)
-			callback((T)Convert.ChangeType(new GarterWWW(www.text, www.error, www.texture), typeof(T))); //export, clear... - return response directly (without data management)
+	private IEnumerator ServerConnJson<T> (string url, string data, Action<T> callback){
+		using (UnityWebRequest request = UnityWebRequest.Put(url, data))
+		{
+			request.method = UnityWebRequest.kHttpVerbPOST;
+			request.SetRequestHeader ("Content-Type", "application/json");
+			request.SetRequestHeader ("Accept", "application/json");
+			yield return request.SendWebRequest();
+			if (typeof(T).FullName == "UnityEngine.Networking.UnityWebRequest") {
+				callback ((T)Convert.ChangeType(request, typeof(T)));
+			} else {
+				callback((T)Convert.ChangeType(new GarterWWW(request.downloadHandler.text, request.error), typeof(T))); //export, clear... - return response directly (without data management)
+			}
 		}
+	}
+	private IEnumerator ServerConnFile(string url, FileType filetype, Action<UnityWebRequest> callback)  //1 - get, 2 - set, 0 - get img (sometimes, data = hash);
+	{
+		UnityWebRequest www = null;
+		if (filetype == FileType.Texture) {
+			www = UnityWebRequestTexture.GetTexture (url);
+		} else if(filetype == FileType.AssetBundle){
+			www = UnityWebRequestAssetBundle.GetAssetBundle (url);
+		}
+		yield return www.SendWebRequest();
+		callback (www);
 	}
 	// SERVER MODULE END
 		
@@ -1361,7 +1383,7 @@ public class Garter : MonoBehaviour {
 			activeSdk = (bool)initializeData [3];
 			minimumTimeScale = (float)initializeData [4];
 			if (activeSdk) {
-				Debug.Log ("GARTER SDK | INITIALIZATION | First Load: " + firstLoad + ", activeSDK: " + activeSdk+", unity: "+Application.unityVersion+", interpreter:"+interpreter+" ts: "+Time.timeScale+" sv:"+AudioListener.volume);
+				Debug.Log ("GARTER SDK (v "+sdkVersion+") | INITIALIZATION | First Load: " + firstLoad + ", activeSDK: " + activeSdk+", unity: "+Application.unityVersion+", interpreter:"+interpreter+" ts: "+Time.timeScale+" sv:"+AudioListener.volume);
 
 				System.Random rKey = new System.Random (); //generate a random key (make secret gameId & userId)
 				uKey = (byte)rKey.Next (6, 52);
@@ -1453,15 +1475,15 @@ public class Garter : MonoBehaviour {
 				userAuthentizationState = 1;
 			}
 			asyncCallbacks = (byte)((editorMode) ? 2 : 1);
-			GetProgressDataReq<WWW>(_ConnReqType.EDITOR, (wwwResp) => UnwrapProgressGetReq(_ConnReqType.EDITOR, wwwResp.error, wwwResp.text));
+			GetProgressDataReq<UnityWebRequest>(_ConnReqType.EDITOR, (wwwResp) => UnwrapProgressGetReq(_ConnReqType.EDITOR, wwwResp.error, wwwResp.downloadHandler.text));
 		} else { // basic sdk
 			if (multiplNetwork != null) { // get network... - basic sdk - get img and other data?
 				asyncCallbacks = 2;
-				GetProgressDataReq<WWW> (_ConnReqType.INIT, (wwwResp) => UnwrapProgressBasicReq(wwwResp.error, wwwResp.text));
+				GetProgressDataReq<UnityWebRequest> (_ConnReqType.INIT, (wwwResp) => UnwrapProgressBasicReq(wwwResp.error, wwwResp.downloadHandler.text));
 			} else {
 				asyncCallbacks = 1;
 			}
-			DownloadDataFile("https://www.pacogames.com/static/images/anonymous.png", result => SetUserImage(result));
+			DownloadDataFile("https://www.pacogames.com/static/images/anonymous.png", FileType.Texture, result => SetUserImage(result));
 		}
 	}
 		
@@ -1498,16 +1520,16 @@ public class Garter : MonoBehaviour {
 			asyncCallbacks = 2;
 
 			if (!interpreter.Equals ('B')) { // Lite + full SDK
-				GetProgressDataReq<WWW>(_ConnReqType.INIT, wwwResp => UnwrapProgressGetReq(_ConnReqType.INIT, wwwResp.error, wwwResp.text));
+				GetProgressDataReq<UnityWebRequest>(_ConnReqType.INIT, wwwResp => UnwrapProgressGetReq(_ConnReqType.INIT, wwwResp.error, wwwResp.downloadHandler.text));
 			} else if (multiplNetwork != null) { // basic mode - requires network
-				GetProgressDataReq<WWW>(_ConnReqType.INIT, wwwResp => UnwrapProgressBasicReq(wwwResp.error, wwwResp.text));
+				GetProgressDataReq<UnityWebRequest>(_ConnReqType.INIT, wwwResp => UnwrapProgressBasicReq(wwwResp.error, wwwResp.downloadHandler.text));
 			} else { // basic mode - does not require network
 				asyncCallbacks--;
 			}
 		}
 
 		//load user image - asyncCallback 2
-		DownloadDataFile(playerData.pu, result => SetUserImage(result)); 
+		DownloadDataFile(playerData.pu, FileType.Texture, result => SetUserImage(result)); 
 	}
 	/*	
 	/// <summary>
@@ -1767,18 +1789,12 @@ public class Garter : MonoBehaviour {
 	/// <returns><c>true</c>, if success, <c>false</c> otherwise.</returns>
 	/// <param name="eventName">Event name.</param>
 	/// <param name="absEventValue">Absolute value of event.</param>
-	public bool SetEventAbs (string eventName, decimal absEventValue){
-		if (activeSdk && absEventValue > 0) {
-			int index = System.Array.IndexOf (events, eventName);
-			if (index != -1) { // event Index
-				Event(eventName, (absEventValue - eventsVal [index] - eKey));
-				return true;
-			} else {
-				Event (eventName);
-				return false;
-			}
+	public decimal EventAbs (string eventName, decimal absEventValue){
+		int index = System.Array.IndexOf (events, eventName);
+		if (index != -1) { // event Index
+			return Event(eventName, (absEventValue - eventsVal [index] - eKey));
 		} else {
-			return false;
+			return Event (eventName);
 		}
 	}
 		
@@ -2137,33 +2153,66 @@ public class Garter : MonoBehaviour {
 	/// 1 = ad in a loop (for singleplayer only);
 	/// 0 = unique ad mode - will be selected by admins
 	/// </param>
-	public void CallAd(int num = 0) { //calling ads - nums: 0 - select ad automatically / 1 - ads in a lopp (for singleplayer mode), 2 - ads on a request
-		if (!editorMode) {
-			browserServices.AdRequest (num, mutedGame, Cursor.lockState.ToString (), Cursor.visible);
-		} else {
+	public void CallAd(int num = 0, Action<string> callback = null) { //calling ads - nums: 0 - select ad automatically / 1 - ads in a lopp (for singleplayer mode), 2 - ads on a request
+		RequestAd(num,callback);
+	}
+	public void RewardedAd(Action<string> callback = null){
+		RequestAd(6,callback);
+	}
+	/// <summary>
+	/// Requests the ad and wait for callbacks.
+	/// </summary>
+	/// <param name="adType">
+	/// 2 = single ad on call;
+	/// 1 = ad in a loop (for singleplayer only);
+	/// 0 = unique ad mode - will be selected by admins
+	/// </param>
+	/// <param name="callback">Callback.</param>
+	private void RequestAd(int adType, Action<string> callback = null){
+		if(callback != null) AddCatchCbListener< string >(CachedListener._AdState, callback);
+		if (!editorMode) { // PRODUCTION MODE
+			browserServices.AdRequest (adType, mutedGame, Cursor.lockState.ToString (), Cursor.visible);
+		} else { // EDITOR MODE
 			OpenSdkWindow ("ad");
 		}
 	}
-	public void RewardedAd(){
-		//OpenSdkWindow ("ad"); // mute game
-		if (!editorMode) {
-			browserServices.AdRequest (6, mutedGame, Cursor.lockState.ToString (), Cursor.visible);
+	public void HAdMeanStateCb(string state){
+		if (cachedCallbacksListeners.ContainsKey (CachedListener._AdState)) ForwardCachedCb(CachedListener._AdState, (state != "completed"), state);
+	}
+	// Next Ad time
+	public void GetAdConf(Action<AdConf> callback){
+		// install listener
+		AddCatchCbListener< AdConf >(CachedListener._AdConf, callback);
+		// callback
+		if(!editorMode){
+			// browser services
+			browserServices.GetAdConfiguration();
 		} else {
-			OpenSdkWindow ("ad"); // mute game
-			HRewardedAdCb ("success");
+			HAdConfCb (SaveToString(new AdConf (0, 180, -1, -1)));
 		}
 	}
+
+	public void HAdConfCb(string adTimeObj){
+		if (editorMode) Debug.Log (adTimeObj);
+		ForwardCachedCb(CachedListener._AdConf, true, GetFromString<AdConf> (adTimeObj));
+	}
+
+	/*
 	/// <summary>
 	/// Do not use. Conn sync internal function with public state
 	/// </summary>
 	/// <param name="state">State.</param>
 	public void HRewardedAdCb(string state){
-		if (!editorMode) {
-			SdkWindowClosed ("ad");
+		if (cachedCallbacksListeners.ContainsKey (CachedListener._AdState)) {
+			ForwardCachedCb(CachedListener._AdState, (state == "completed"), state);
+		} else {
+			if (!editorMode) {
+				SdkWindowClosed ("ad");
+			}
+			ForwardExternalCb(ExternalListener.RewarededAdState, state);
 		}
-		ForwardExternalCb(ExternalListener.RewarededAdState, state);
 	}
-
+	*/
 	public void InstallAsPWA<T>(Action<T> callback){ // listener install
 		// install internal listener
 		AddCatchCbListener< T >(CachedListener._PWAState, callback);
@@ -2179,7 +2228,7 @@ public class Garter : MonoBehaviour {
 
 	public void PwaCb(string state){
 		if (state != "enabled" && state != "disabled") {
-			ForwardCachedCb(CachedListener._PWAState, state); // installed...
+			ForwardCachedCb(CachedListener._PWAState, false, state); // installed...
 		} else {
 			_PWAStatus = state;
 			ForwardExternalCb (ExternalListener.PWAState, state);
@@ -2209,7 +2258,7 @@ public class Garter : MonoBehaviour {
 
 	private void GameInitialized(string state){
 		if(!interpreter.Equals('B')) SdkWindowClosed ("login");
-		sdkInitialiized = true;
+		sdkInitialized = true;
 		UpdateGarterGUIifAvailable ();
 		ForwardExternalCb (ExternalListener.SdkInitialized, state);
 
@@ -2374,21 +2423,27 @@ public class Garter : MonoBehaviour {
 	}
 	// called from browser - muting game via this
 	public void SdkWindowOpened(string windowName){
-		mutedGame = true;
-		servicesAdjustment.ModuleWindowOpened(windowName);
-		Log("info","SdkWindowOpened ("+windowName+") | MUTED? "+mutedGame+" | audio: "+AudioListener.volume+" |ts: "+Time.timeScale);
+		if (windowName != "ad" || (windowName == "ad" && !cachedCallbacksListeners.ContainsKey (CachedListener._AdState))) {
+			mutedGame = true;
+			servicesAdjustment.ModuleWindowOpened(windowName);
+			Log("info","SdkWindowOpened ("+windowName+") | MUTED? "+mutedGame+" | audio: "+AudioListener.volume+" |ts: "+Time.timeScale);
+		} else if(windowName == "ad"){
+			ForwardCachedCb(CachedListener._AdState, false, "loaded");
+		}
 	}
-
 	public void SdkWindowChanged(string window){
 		servicesAdjustment.ModuleWindowChanged(window);
 		Log("info","SdkWindowChanged ("+window+") | MUTED? "+mutedGame+" | audio: "+AudioListener.volume+" |ts: "+Time.timeScale);
 	}
-
 	public void SdkWindowClosed(string window = null){ // unmute game
-		servicesAdjustment.ModuleWindowClosed (window); // ad
-		mutedGame = false;
-		Log("info","SdkWindowClosed ("+window+") | MUTED? "+mutedGame+" | audio: "+AudioListener.volume+" |ts: "+Time.timeScale);
-
+		if (window != "ad" || (window == "ad" && !cachedCallbacksListeners.ContainsKey (CachedListener._AdState))) { // must be solve on cb f-ce side
+			servicesAdjustment.ModuleWindowClosed (window); // ad
+			mutedGame = false;
+			Log("info","SdkWindowClosed ("+window+") | MUTED? "+mutedGame+" | audio: "+AudioListener.volume+" |ts: "+Time.timeScale);
+		} else if(window == "ad"){
+			ForwardCachedCb(CachedListener._AdState, true, "completed");
+		}
+			
 		// retrun state to cb
 		if(editorMode&&window == "PWA"){
 			PwaCb("dismissed");
@@ -2441,7 +2496,7 @@ public class Garter : MonoBehaviour {
 		//Debug.Log("-- Sync shop req --");
 		if (editorMode) hash = iHash;
 		if (userAuthentizationState == 2) {
-			GetProgressDataReq<WWW> (_ConnReqType.SHOP, wwwResp => UnwrapProgressGetReq (_ConnReqType.SHOP, wwwResp.error, wwwResp.text));
+			GetProgressDataReq<UnityWebRequest> (_ConnReqType.SHOP, wwwResp => UnwrapProgressGetReq (_ConnReqType.SHOP, wwwResp.error, wwwResp.downloadHandler.text));
 		} else {
 			SdkWindowClosed ("shop");
 		}
@@ -2524,13 +2579,13 @@ public class Garter : MonoBehaviour {
 			}
 
 		} else if (interpreter.Equals ('L')) {
-			if(sdkInitialiized) ForwardExternalCb (ExternalListener.PossibleGameExit, "");
+			if(sdkInitialized) ForwardExternalCb (ExternalListener.PossibleGameExit, "");
 		} 
 	}
 	private void OnApplicationQuite( )
 	{
 		if(debugMode) Debug.Log ("OnApplicationQuite");
-		if(sdkInitialiized) ForwardExternalCb (ExternalListener.PossibleGameExit, "");
+		if(sdkInitialized) ForwardExternalCb (ExternalListener.PossibleGameExit, "");
 	}
 
 	// for a case of need
@@ -2543,7 +2598,8 @@ public class Garter : MonoBehaviour {
 	}
 	public void SetIndividualGameSettings(string data){ // Ad closed?
 		//Debug.Log("Set individual game settings");
-		GameSetting gs = JsonUtility.FromJson<GameSetting> (data);
+		GameSetting gs = GetFromString<GameSetting> (data);
+
 		// muted
 		mutedGame = gs.m;
 		// sound
@@ -2603,7 +2659,7 @@ public class Garter : MonoBehaviour {
 		ExternalSettingsButtonPressed,
 		ReceivedBadges,
 		PossibleGameExit,
-		RewarededAdState,
+		//RewarededAdState,
 		PWAState,
 		ActiveTabMonitor
 	}
@@ -2612,7 +2668,6 @@ public class Garter : MonoBehaviour {
 	public void AddExternalCbListener<T>(ExternalListener listener, Action<T> cb){
 		if (!externalCallbacksListeners.ContainsKey (listener)) {
 			externalCallbacksListeners.Add(listener,cb); // add
-			if(debugMode) Debug.Log("Adding listener: "+listener.ToString());
 		} else { // replace
 			externalCallbacksListeners [listener] = cb;
 		}
@@ -2648,7 +2703,8 @@ public class Garter : MonoBehaviour {
 	private enum CachedListener
 	{
 		_PWAState, // internal PWA State	
-		_AdState
+		_AdState,
+		_AdConf
 	}
 	private Dictionary<CachedListener, Delegate> cachedCallbacksListeners = new Dictionary<CachedListener, Delegate>(); // callback received from 3-rd party call
 	private void AddCatchCbListener<T>(CachedListener listener, Action<T> cb){
@@ -2659,13 +2715,14 @@ public class Garter : MonoBehaviour {
 			cachedCallbacksListeners [listener] = cb;
 		}
 	}
-	private void ForwardCachedCb<T>(CachedListener internEvent, T cbData){
+	private void ForwardCachedCb<T>(CachedListener internEvent, bool removeCb, T cbData){
 		if (cachedCallbacksListeners.ContainsKey (internEvent)) {
 			foreach(var d in cachedCallbacksListeners){
 				if (d.Key == internEvent) {
 					d.Value.DynamicInvoke (cbData); break;
 				}
 			}
+			if (removeCb) cachedCallbacksListeners.Remove (internEvent);
 		} else {
 			Debug.LogWarning ("No function listening for "+internEvent.ToString()+" found");
 		}
@@ -2965,6 +3022,22 @@ public class Garter : MonoBehaviour {
 		public OpenWindowConf(string window, byte sync){
 			this.w = window;
 			this.s = sync;
+		}
+	}
+
+	// time to next ad
+	[System.Serializable]
+	public class AdConf
+	{
+		public int nextAdM;
+		public int meantimeM;
+		public int nextAdR;
+		public int meantimeR;
+		public AdConf(int nextAdM, int meantimeM, int nextAdR, int meantimeR){
+			this.nextAdM = nextAdM;
+			this.meantimeM =meantimeM;
+			this.nextAdR = nextAdR;
+			this.meantimeR =meantimeR;
 		}
 	}
 

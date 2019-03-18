@@ -28,7 +28,9 @@ public class HGarterInitEditor : Editor
 		HGarterInit init = (HGarterInit)target;
 
 		EditorGUILayout.BeginHorizontal ();
-		EditorGUILayout.HelpBox ("\nDo you see any issue in your Unity version or do you need a help with anything? -> vladimir@gamearter.com\n", MessageType.Info);
+		EditorGUILayout.HelpBox ("\nDO NOT FILL THIS IN PLAY MODE\n" +
+			"If you used prefab, you must save filled data by pressing APPLY button in top right corner.\n" +
+			"\nAny issue or do you need help with anything? -> vladimir@gamearter.com\n", MessageType.Info);
 		EditorGUILayout.EndHorizontal();
 
 		serializedObject.Update();
@@ -424,6 +426,7 @@ public class HGarterInitEditor : Editor
 									stackData [i] = stackDataList [i];
 								}
 							}
+
 							string initDataJson = "";
 							if (interpreter.Equals ('F')) { //individual...
 								InitExportFull initData = new InitExportFull ();

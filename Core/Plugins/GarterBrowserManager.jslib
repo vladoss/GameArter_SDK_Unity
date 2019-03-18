@@ -24,6 +24,17 @@ mergeInto(LibraryManager.library, {
     	}
     },
 
+    _gb_getAdConf: function(){
+        document.onmouseup = function()
+        {
+            Pointer_stringify();
+            try {
+                Garter.game.getAdConf();
+            } catch(e){console.error(e);}
+            document.onmouseup = null;
+        }
+    },
+
     _gb_analyticsRequest: function(dataObj){ // problem of first call
         try{
     		if(Garter.game !== undefined){
@@ -135,6 +146,6 @@ mergeInto(LibraryManager.library, {
             } catch(e){console.error(e);}
         	document.onmouseup = null;
         }
-    },
+    }
 
 });

@@ -19,6 +19,26 @@ public class StaticHelpersGarterSDK : MonoBehaviour {
 		Garter.I.CallAd (2);
 		SdkDebugger("Garter.I.CallAd (2)", "-", "If no ad displayed, there was not enough time from prev ad");
 	}
+	public void CallAdWithCb(){
+		SdkDebugger("CallAd (2, (state) => {})", "-", "returns state of ad in a callback");
+		Garter.I.CallAd (2, (state) => {
+			SdkDebugger("CallAd (2, (state) => {})", state.ToString(), "returns state of ad in a callback");
+			if(state == "loaded"){
+				// MUTE GAME
+			} else if(state == "completed"){
+				// UNMUTE GAME
+			} else {
+				// ...
+			}
+		});
+	}
+
+	public void GetAdConf(){
+		Garter.I.GetAdConf ((conf) => {
+			SdkDebugger("Garter.I.GetAdConf ((conf) => {})", ("Next ad in "+conf.nextAdM.ToString()+"s. Minimum time between ads "+conf.meantimeM.ToString()+"s."), "returns ads configuration.");
+		});
+	}
+
 	public void RewardAd(){
 		Garter.I.RewardedAd();
 		SdkDebugger("Garter.I.RewardedAd()", "-", "-");
@@ -162,6 +182,10 @@ public class StaticHelpersGarterSDK : MonoBehaviour {
 			SdkDebugger ("Garter.I.UserProgress ("+randomProgressVal+");", Garter.I.UserProgress (randomProgressVal).ToString(), "Depends on game progress counting option");
 		}
 	}
+
+	public void GetBrowserActivityState(){
+		SdkDebugger ("Garter.I.GetBrowserTabState ()", Garter.I.GetBrowserTabState (), "Browser tab state");
+	}
 		
 	public Texture officeMap = null;
 
@@ -181,10 +205,6 @@ public class StaticHelpersGarterSDK : MonoBehaviour {
 		}
 
 	}
-
-
-
-
 
 	public void NextScene(){
 		SceneManager.LoadScene (1);

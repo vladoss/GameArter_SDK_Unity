@@ -9,7 +9,6 @@ public class GarterBasicCallbacks : MonoBehaviour {
 	void Awake(){
 		// ADD LISTENERS FOR EXTERNAL EVENTS
 		Garter.I.AddExternalCbListener<GarterWWW>(Garter.ExternalListener.SdkInitialized, SdkInitialized);
-		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.RewarededAdState, RewardedAdCallback);
 		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.ExternalSettingsButtonPressed, SettingsButtonPressed);
 		Garter.I.AddExternalCbListener<string> (Garter.ExternalListener.ActiveTabMonitor, ActiveTabMonitor);
 

@@ -6,7 +6,6 @@ public class GarterFullCallbacks : MonoBehaviour {
 		// ADD LISTENERS FOR EXTERNAL EVENTS
 		Garter.I.AddExternalCbListener<GarterWWW>(Garter.ExternalListener.SdkInitialized, SdkInitialized);
 		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.ExternalSettingsButtonPressed, SettingsButtonPressed);
-		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.RewarededAdState, RewardedAdCallback);
 		Garter.I.AddExternalCbListener<string>(Garter.ExternalListener.EventExternalUpdate, EventUpdateViaShop);
 		Garter.I.AddExternalCbListener<string[]>(Garter.ExternalListener.ReceivedBadges, BadgeReceived);
 		Garter.I.AddExternalCbListener<float>(Garter.ExternalListener.CurrencyUpdate, CurrencyUpdateInOwnGui);

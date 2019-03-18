@@ -126,6 +126,13 @@ public class HGarterBrowserServices {
 		_gb_installAsPwa ();
 	}
 
+	// Get time to next ad and min ad meantime
+	[DllImport("__Internal")]
+	private static extern void _gb_getAdConf();
+	public void GetAdConfiguration(){
+		_gb_getAdConf ();
+	}
+
 	// Identification for BrowserSDK
 	[System.Serializable]
 	internal class SdkInitInfo {
