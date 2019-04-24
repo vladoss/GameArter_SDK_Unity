@@ -1,4 +1,4 @@
-﻿// Copyright 2013 - 2018, Awagon Entertainment s.r.o., All rights reserved.
+﻿// Copyright 2013 - 2019, Awagon Entertainment s.r.o., All rights reserved.
 using System;
 using UnityEngine;
 using System.Collections;
@@ -16,7 +16,7 @@ using GarterProtection;
 using UnityEngine.UI;
 
 public class Garter : MonoBehaviour {
-	readonly string sdkVersion = "2.4";
+	readonly string sdkVersion = "2.5";
 	private static string serverAddress = "https://api.gamearter.com/game/sdk/1";  //PRODUCTION (cypher)
 	//private static string serverAddress = "https://api.gamearter.com/test/sdk/1"; // DEV TESTNET
 
@@ -2273,6 +2273,10 @@ public class Garter : MonoBehaviour {
 			gui.DestrolLoginBox ();
 			PwaCb("enabled");
 		}
+	}
+
+	public bool IsInitialized(){
+		return sdkInitialized;
 	}
 		
 
