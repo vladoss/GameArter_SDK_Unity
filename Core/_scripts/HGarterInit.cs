@@ -389,7 +389,7 @@ public class HGarterInit : MonoBehaviour {
 				active == Active.Yes, //3
 				minimumTimescale, //4
 				enabledProtection == Active.Yes, //5
-				multiplayer == MultiplayerGame.Yes, //6
+				garterNetwork == Active.Yes, //6 multiplayer
 				analyticsMode.ToString().ToLower(), //7
 				eventsNames, //8
 				eInitValue, //9
@@ -416,7 +416,7 @@ public class HGarterInit : MonoBehaviour {
 				active == Active.Yes, //3
 				minimumTimescale, //4
 				enabledProtection == Active.Yes, //5
-				multiplayer == MultiplayerGame.Yes, //6
+				garterNetwork == Active.Yes, //6
 				analyticsMode.ToString().ToLower(), //7
 				GetFeatureButtons(), //8 display settings btn in featureBar
 				platform //9
