@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using GameArter.Ads;
 
 [HideInInspector]
 public class HGarterInit : MonoBehaviour {
@@ -16,11 +17,6 @@ public class HGarterInit : MonoBehaviour {
 		V1, V2, V3, V4, V5
 	}
 	public ProjectVersion projectVersion;
-
-	public enum Platform {
-		Webgl
-	}
-	public Platform platform;
 
 	public enum MultiplayerGame {
 		No, Yes
@@ -80,6 +76,7 @@ public class HGarterInit : MonoBehaviour {
 	public ProgressModule progressModule;
 	// end of progress section
 
+	public AdsConfiguration ads;
 
 	[Range(0.0f, 1.0f)]
 	public float minimumTimescale;
@@ -121,7 +118,6 @@ public class HGarterInit : MonoBehaviour {
 		public float parameterValue;
 	}
 
-
 	[System.Serializable]
 	public class Property 
 	{
@@ -161,76 +157,78 @@ public class HGarterInit : MonoBehaviour {
 			
 	void Awake() {
 		if (Garter.I.IsFirstLoad () && active == Active.Yes) { //Initialize
-			Verification ();
+            // Platform detection
+
+            Verification ();
 		} else if(active == Active.Yes){ //update GUI
 			Garter.I.Initialize(null);
 		}
 	}
-		
 
-	private void Verification()
-	{
-		#if UNITY_EDITOR && UNITY_WEBGL
+
+    private void Verification()
+    {
+#if UNITY_EDITOR && UNITY_WEBGL
 		if (projectId == 0) Debug.LogError ("projectId cannot be 0");
-		#endif
+#endif
 
-		object[] output = null;
+        object[] output = null;
 
-		char interpreter = 'B';
-		switch (sdk) {
-		case Sdk.Full: interpreter = 'F'; break;
-		case Sdk.Lite: interpreter = 'L'; break;
-		}
-			
-		byte projectVersionNum = 1;
-		switch (projectVersion) {
-		case ProjectVersion.V2: projectVersionNum = 2; break;
-		case ProjectVersion.V3: projectVersionNum = 3; break;
-		case ProjectVersion.V4: projectVersionNum = 4; break;
-		case ProjectVersion.V5: projectVersionNum = 5; break;
-		}
-			
-		if (!interpreter.Equals ('B')) {
-			// ----- Events ----- //
-			// Create arrays of Event properties
-			int eventsLength = 0;
-			int groupsLength = events.Length;
-			for (int i = 0; i < groupsLength; i++) {
-				eventsLength += events [i].groupEvents.Length;
-			}
-		
-			string[] eventsNames = new string[eventsLength];
-			decimal[] eInitValue = new decimal[eventsLength];
-			byte[] eIncreasingTrend = new byte[eventsLength];
+        char interpreter = 'B';
+        switch (sdk) {
+            case Sdk.Full: interpreter = 'F'; break;
+            case Sdk.Lite: interpreter = 'L'; break;
+        }
 
-			int eventIndex = 0;
-			for (int i = 0; i < groupsLength; i++) {
-				int eLength = events [i].groupEvents.Length;
-				for (int j = 0; j < eLength; j++) {
-					eventsNames [eventIndex] = events [i].groupEvents [j].nameId;
-					#if UNITY_EDITOR && UNITY_WEBGL
+        byte projectVersionNum = 1;
+        switch (projectVersion) {
+            case ProjectVersion.V2: projectVersionNum = 2; break;
+            case ProjectVersion.V3: projectVersionNum = 3; break;
+            case ProjectVersion.V4: projectVersionNum = 4; break;
+            case ProjectVersion.V5: projectVersionNum = 5; break;
+        }
+
+        if (!interpreter.Equals('B')) {
+            // ----- Events ----- //
+            // Create arrays of Event properties
+            int eventsLength = 0;
+            int groupsLength = events.Length;
+            for (int i = 0; i < groupsLength; i++) {
+                eventsLength += events[i].groupEvents.Length;
+            }
+
+            string[] eventsNames = new string[eventsLength];
+            decimal[] eInitValue = new decimal[eventsLength];
+            byte[] eIncreasingTrend = new byte[eventsLength];
+
+            int eventIndex = 0;
+            for (int i = 0; i < groupsLength; i++) {
+                int eLength = events[i].groupEvents.Length;
+                for (int j = 0; j < eLength; j++) {
+                    eventsNames[eventIndex] = events[i].groupEvents[j].nameId;
+#if UNITY_EDITOR && UNITY_WEBGL
 					if(events [i].groupEvents [j].nameId == ""){
 						Debug.LogError("nameId of event with index "+j+" inside group "+events [i].groupName+" cannot be empty string");
 					}
-					#endif
-					eInitValue [eventIndex] = (decimal)events [i].groupEvents [j].initialValue;
-					switch (events [i].groupEvents [j].trend) {
-					case Trend.Increasing:
-						eIncreasingTrend [eventIndex] = 0;
-						break;
-					case Trend.Decreasing:
-						eIncreasingTrend [eventIndex] = 1;
-						break;
-					case Trend.Undefined:
-						eIncreasingTrend [eventIndex] = 2;
-						break;
-					}
-					eventIndex++;
-				}
-			}
-				
-			// check events for duplicity
-			#if UNITY_EDITOR && UNITY_WEBGL
+#endif
+                    eInitValue[eventIndex] = (decimal)events[i].groupEvents[j].initialValue;
+                    switch (events[i].groupEvents[j].trend) {
+                        case Trend.Increasing:
+                            eIncreasingTrend[eventIndex] = 0;
+                            break;
+                        case Trend.Decreasing:
+                            eIncreasingTrend[eventIndex] = 1;
+                            break;
+                        case Trend.Undefined:
+                            eIncreasingTrend[eventIndex] = 2;
+                            break;
+                    }
+                    eventIndex++;
+                }
+            }
+
+            // check events for duplicity
+#if UNITY_EDITOR && UNITY_WEBGL
 			string gameEventsC = "game events (" + eventsLength + "): ";
 			HashSet<string> gameEventsDuplicity = new HashSet<string> (); //check itemNames for duplicity
 			for (int i = 0; i < eventsLength; i++) {
@@ -250,56 +248,56 @@ public class HGarterInit : MonoBehaviour {
 				}
 				Debug.LogError ("GameArter | Found duplicated events: "+ names+"| Please, remove duplicities.");
 			}
-			#endif
+#endif
 
-			// ----- items ----- //
-			int itemsL = property.items.Length;
-			int accessoriesL = property.accessories.Length;
-			int itemsChildrens = itemsL + accessoriesL;
-			// variables
-			string[] itemNames = new string[itemsChildrens]; //itemNames: utem0, item1 ...
-			int[] itemsState = new int[itemsChildrens]; //itemsStates: -1 = locked, 0 = unlocked, 1 = upgrade 1 ...
-			string[][] itemSkillName = new string[itemsChildrens][]; //propertySkillName: ["attack","defense"] - undefined number of skills -> jagged array
-			float[][] itemSkillPerformance = new float[itemsChildrens][]; //propertySkillPerformance: [100,20]
-			List<string> dependencies = new List<string> (); //initial dependencies item1 + item 7 = e.g. weapon1 + laser3
+            // ----- items ----- //
+            int itemsL = property.items.Length;
+            int accessoriesL = property.accessories.Length;
+            int itemsChildrens = itemsL + accessoriesL;
+            // variables
+            string[] itemNames = new string[itemsChildrens]; //itemNames: utem0, item1 ...
+            int[] itemsState = new int[itemsChildrens]; //itemsStates: -1 = locked, 0 = unlocked, 1 = upgrade 1 ...
+            string[][] itemSkillName = new string[itemsChildrens][]; //propertySkillName: ["attack","defense"] - undefined number of skills -> jagged array
+            float[][] itemSkillPerformance = new float[itemsChildrens][]; //propertySkillPerformance: [100,20]
+            List<string> dependencies = new List<string>(); //initial dependencies item1 + item 7 = e.g. weapon1 + laser3
 
-			if (interpreter.Equals('F')) {
-				#if UNITY_EDITOR && UNITY_WEBGL
+            if (interpreter.Equals('F')) {
+#if UNITY_EDITOR && UNITY_WEBGL
 				// extract taken data to a console + check for duplicity
 				string propertyDataC = "Items (" + itemsChildrens + "): ";
-				#endif
+#endif
 
-				// ----- items -----
-				for (int i = 0; i < itemsL; i++) { // zapis itemu
-					
-					string itemName = property.items [i].nameId;
-					// name
-					itemNames [i] = itemName; // set itemName
-					// state
-					itemsState [i] = getItemState (property.items [i].initialState); // set itemState
+                // ----- items -----
+                for (int i = 0; i < itemsL; i++) { // zapis itemu
 
-					if (property.items [i].initialState == Items.InitialState.selected) stackDataList.Add (itemName); // add to stack data, if state is selected
+                    string itemName = property.items[i].nameId;
+                    // name
+                    itemNames[i] = itemName; // set itemName
+                                             // state
+                    itemsState[i] = getItemState(property.items[i].initialState); // set itemState
 
-					// dependencies
-					string dependency = property.items [i].initialAccessories; // nastav defaultne
-					if (!string.IsNullOrEmpty(dependency)) dependencies.Add (itemName+"#"+dependency);
+                    if (property.items[i].initialState == Items.InitialState.selected) stackDataList.Add(itemName); // add to stack data, if state is selected
 
-					#if UNITY_EDITOR && UNITY_WEBGL
+                    // dependencies
+                    string dependency = property.items[i].initialAccessories; // nastav defaultne
+                    if (!string.IsNullOrEmpty(dependency)) dependencies.Add(itemName + "#" + dependency);
+
+#if UNITY_EDITOR && UNITY_WEBGL
 					propertyDataC += "|| " + itemName + ": state=" + itemsState [i];
 					propertyDataC += ", dependencies: " + dependency + ", properties: "; //searching according to top item (index 0 after parsing)
-					#endif
+#endif
 
-					// initial properties - check and add Property
-					int propertiesChild = property.items [i].initialProperties.Count;
-					List<InitialProperties> bpData = property.items [i].initialProperties;
-					itemSkillName [i] = new string[propertiesChild];
-					itemSkillPerformance [i] = new float[propertiesChild];
-					for (var k = 0; k < propertiesChild; k++) {
-						InitialProperties bp = bpData [k];
-						itemSkillName [i] [k] = bp.parameterName;
-						itemSkillPerformance [i] [k] = bp.parameterValue;
+                    // initial properties - check and add Property
+                    int propertiesChild = property.items[i].initialProperties.Count;
+                    List<InitialProperties> bpData = property.items[i].initialProperties;
+                    itemSkillName[i] = new string[propertiesChild];
+                    itemSkillPerformance[i] = new float[propertiesChild];
+                    for (var k = 0; k < propertiesChild; k++) {
+                        InitialProperties bp = bpData[k];
+                        itemSkillName[i][k] = bp.parameterName;
+                        itemSkillPerformance[i][k] = bp.parameterValue;
 
-						#if UNITY_EDITOR && UNITY_WEBGL
+#if UNITY_EDITOR && UNITY_WEBGL
 						if (itemSkillName [i] [k] == "") {
 							if(itemName == ""){
 								Debug.LogError ("Item named '' is inside items section. Please, fill its name.");
@@ -308,36 +306,36 @@ public class HGarterInit : MonoBehaviour {
 							}
 						}
 						propertyDataC += itemSkillName [i] [k] + "=" + itemSkillPerformance [i] [k] + " ";
-						#endif
-					}
-				} // end of item for loop
+#endif
+                    }
+                } // end of item for loop
 
 
 
-				// ----- accessories -----
-				for (int i = 0; i < accessoriesL; i++) { // zapis accessories
-					int indexY = itemsL + i;
-					// name
-					string accessoryName = property.accessories [i].nameId;
-					itemNames [indexY] =  accessoryName;
-					// state
-					itemsState [indexY] = getAccessoryState (property.accessories [i].initialStateAsc);
+                // ----- accessories -----
+                for (int i = 0; i < accessoriesL; i++) { // zapis accessories
+                    int indexY = itemsL + i;
+                    // name
+                    string accessoryName = property.accessories[i].nameId;
+                    itemNames[indexY] = accessoryName;
+                    // state
+                    itemsState[indexY] = getAccessoryState(property.accessories[i].initialStateAsc);
 
-					#if UNITY_EDITOR && UNITY_WEBGL
+#if UNITY_EDITOR && UNITY_WEBGL
 					propertyDataC += "|| " + itemNames [indexY] + ": state=" + itemsState [indexY];
-					#endif
+#endif
 
-					// properties
-					int propertiesChild = property.accessories [i].initialProperties.Count;
-					List<InitialProperties> bpData = property.accessories [i].initialProperties;
-					itemSkillName [indexY] = new string[propertiesChild];
-					itemSkillPerformance [indexY] = new float[propertiesChild];
-					for (var k = 0; k < propertiesChild; k++) {
-						InitialProperties bp = bpData [k];
-						itemSkillName [indexY] [k] = bp.parameterName;
-						itemSkillPerformance [indexY] [k] = bp.parameterValue;
+                    // properties
+                    int propertiesChild = property.accessories[i].initialProperties.Count;
+                    List<InitialProperties> bpData = property.accessories[i].initialProperties;
+                    itemSkillName[indexY] = new string[propertiesChild];
+                    itemSkillPerformance[indexY] = new float[propertiesChild];
+                    for (var k = 0; k < propertiesChild; k++) {
+                        InitialProperties bp = bpData[k];
+                        itemSkillName[indexY][k] = bp.parameterName;
+                        itemSkillPerformance[indexY][k] = bp.parameterValue;
 
-						#if UNITY_EDITOR && UNITY_WEBGL
+#if UNITY_EDITOR && UNITY_WEBGL
 						if (itemSkillName [indexY] [k] == "") {
 							if(accessoryName == ""){
 								Debug.LogError ("Item named '' is inside accessories section. Please, fill the name.");
@@ -346,50 +344,49 @@ public class HGarterInit : MonoBehaviour {
 							}
 						}
 						propertyDataC += itemSkillName [indexY] [k] + "=" + itemSkillPerformance [indexY] [k] + " ";
-						#endif
-					}
-				} // end of accessories loop
+#endif
+                    }
+                } // end of accessories loop
 
 
-				#if UNITY_EDITOR && UNITY_WEBGL
+#if UNITY_EDITOR && UNITY_WEBGL
 				//check item name for duplicity
 				if (stackDataList.Count == 0) {
 					Debug.LogWarning ("GameArter | No items inside stack. Is this right?");
 				}
 					
 				//Debug.Log (propertyDataC);
-				#endif
-			} // end of full sdk
+#endif
+            } // end of full sdk
 
 
-			// create stack data array
-			string[] stackData = new string[0];
-			int stackDataListChilds = stackDataList.Count;
-			if (stackDataListChilds > 0) {
-				stackData = new string[stackDataListChilds];
-				for (int i = 0; i < stackDataListChilds; i++) {
-					stackData [i] = stackDataList [i];
-				}
-			}
-				
-			// settings for sdk
-			byte[] featureButtons = GetFeatureButtons();
-			bool[] featuresNotification = new bool[] {gamearterFeatures.notifications == EnabledDisabled.Enabled};
+            // create stack data array
+            string[] stackData = new string[0];
+            int stackDataListChilds = stackDataList.Count;
+            if (stackDataListChilds > 0) {
+                stackData = new string[stackDataListChilds];
+                for (int i = 0; i < stackDataListChilds; i++) {
+                    stackData[i] = stackDataList[i];
+                }
+            }
 
-			bool progressBarVisibility = false;
-			if (progressModule.mode != ProgressMode.None) progressBarVisibility = (progressModule.sdkProgressBar == BtnVisibility.Displayed);
+            // settings for sdk
+            byte[] featureButtons = GetFeatureButtons();
+            bool[] featuresNotification = new bool[] { gamearterFeatures.notifications == EnabledDisabled.Enabled };
 
-			if (enabledProtection == Active.No) Debug.LogWarning ("GARTER | Steal protection is beeing disabled");
+            bool progressBarVisibility = false;
+            if (progressModule.mode != ProgressMode.None) progressBarVisibility = (progressModule.sdkProgressBar == BtnVisibility.Displayed);
 
+            if (enabledProtection == Active.No) Debug.LogWarning("GARTER | Steal protection is beeing disabled");
 
-			output = new object[]{
-				projectId, //0
+            output = new object[]{
+                projectId, //0
 				projectVersionNum, //1
 				interpreter, //2
 				active == Active.Yes, //3
 				minimumTimescale, //4
 				enabledProtection == Active.Yes, //5
-				garterNetwork == Active.Yes, //6 multiplayer
+				multiplayer == MultiplayerGame.Yes, //6 multiplayer
 				analyticsMode.ToString().ToLower(), //7
 				eventsNames, //8
 				eInitValue, //9
@@ -406,23 +403,31 @@ public class HGarterInit : MonoBehaviour {
 				individual, //20
 				autoSaving == EnabledDisabled.Enabled, //21
 				ingameCurrency == Active.Yes, //22
-				platform //23
+                ads //23
 			};
-		} else { //Basic SDK
-			output = new object[] {
-				projectId, //0
+        } else { //Basic SDK
+            output = new object[] {
+                projectId, //0
 				projectVersionNum, //1
 				interpreter, //2
 				active == Active.Yes, //3
 				minimumTimescale, //4
 				enabledProtection == Active.Yes, //5
-				garterNetwork == Active.Yes, //6
+				multiplayer == MultiplayerGame.Yes, //6
 				analyticsMode.ToString().ToLower(), //7
 				GetFeatureButtons(), //8 display settings btn in featureBar
-				platform //9
+                ads //9
 			};
-		}
-		Garter.I.Initialize (output);
+        }
+        Garter.I.Initialize(output);
+
+        // Load and set
+        /*
+        Garter Core
+        Garter User
+        Garter Ads
+        Garter DB
+        */
 	}
 
 	private byte[] GetFeatureButtons(){

@@ -1,7 +1,8 @@
-﻿using System.Collections;
+﻿//using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+
 
 public class DataManagerExample : MonoBehaviour {
 
@@ -24,6 +25,7 @@ public class DataManagerExample : MonoBehaviour {
 	{
 		if (string.IsNullOrEmpty (sdkError)) {
 
+            /*
 			// User data are available
 			Debug.Log("UserNick: " + Garter.I.UserNick());
 			Debug.Log("UserLanguage: " + Garter.I.UserLang());
@@ -32,15 +34,17 @@ public class DataManagerExample : MonoBehaviour {
 			Debug.Log("User Image:" + Garter.I.UserImage());
 			Debug.Log ("Game progress in game: " + Garter.I.UserProgress ());
 			Debug.Log ("User's game funds: " + Garter.I.LocalCurrency ());
+            */
 
 			// if your game is multiplayer, since now photon id and ver is available
 			if (Garter.I.GetMultiplayerNetwork() != null)
 			{
 				Debug.Log("PHOTON ID HERE");
+                Debug.Log(Garter.I.GetMultiplayerNetwork()[0] + " | "+ Garter.I.GetMultiplayerNetwork()[1]);
 				//string photonId = Garter.I.GetMultiplayerNetwork () [0]; - uncomment for using
 				//string photonVersion = Garter.I.GetMultiplayerNetwork () [1]; - uncomment for using
 				Debug.Log("Network authentication | " + Garter.I.NetworkAuthentication() + " / " + Garter.I.NetworkUniqueUserId());
-			}
+            }
 				
 			// get value of a saved key
 			GetData();
@@ -185,14 +189,13 @@ public class DataManagerExample : MonoBehaviour {
        
 		// Update currency value displayed in the UI
 		try
-        {
+        {   // UPDATE FUNDS in own UI (own UI does not exist in this example)
 			GameObject userFunds = GameObject.Find("UserFunds");
 			Text userFundsTxt = userFunds.GetComponent<Text>();
 			userFundsTxt.text = "User funds: " + currencyValue;
         }
         catch
         {
-            Debug.Log("Object with currency was not found");
         }
 
     }

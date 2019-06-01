@@ -5,17 +5,18 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Text;
+using GameArter.Ads;
 
 [ExecuteInEditMode]
 [CustomEditor(typeof(HGarterInit))]
 public class HGarterInitEditor : Editor 
 {
-	[MenuItem("Tools/GameArter/web")]
+	[MenuItem("GameArter/web")]
 	static void Web(){
 		Application.OpenURL ("https://www.gamearter.com");
 	}
 
-	[MenuItem("Tools/GameArter/documentation")]
+	[MenuItem("GameArter/documentation")]
 	static void Documentation(){
 		Application.OpenURL ("https://developers.gamearter.com/docs/unity/sdk-overview.php");
 	}
@@ -83,11 +84,6 @@ public class HGarterInitEditor : Editor
 				}
 				EditorGUILayout.PropertyField (serializedObject.FindProperty ("projectVersion"), true);
 				EditorGUILayout.EndHorizontal ();
-
-				EditorGUILayout.BeginHorizontal ();
-				EditorGUILayout.PropertyField (serializedObject.FindProperty ("platform"), true);
-				EditorGUILayout.EndHorizontal ();
-
 				EditorGUILayout.PrefixLabel("");
 
 				EditorGUILayout.BeginHorizontal ();
@@ -166,7 +162,12 @@ public class HGarterInitEditor : Editor
 						init.progressModule.mode = (HGarterInit.ProgressMode)EditorGUILayout.EnumPopup ("Progress Mode", (HGarterInit.ProgressMode)init.progressModule.mode);
 					}
 					EditorGUILayout.EndHorizontal();
-					
+
+                    // ADS
+                    EditorGUILayout.BeginHorizontal ();
+					EditorGUILayout.PropertyField (serializedObject.FindProperty ("ads"), true);
+					EditorGUILayout.EndHorizontal ();
+
 					// external box config
 					EditorGUILayout.BeginHorizontal ();
 					EditorGUILayout.PropertyField (serializedObject.FindProperty ("minimumTimescale"), true);
@@ -436,8 +437,8 @@ public class HGarterInitEditor : Editor
 								initData.a = (byte)((init.autoSaving == HGarterInit.EnabledDisabled.Enabled) ? 1 : 0);
 								initData.c = 0;
 								initData.p = GetProgressMode (init.progressModule.mode);
-								//Debug.Log ("progress mode: "+initData.p);
-								initData.ij = iJSON;
+                                initData.ads = init.ads;
+                                initData.ij = iJSON;
 								initData.its = itemsState;
 								initData.s = stackData;
 								initData.l = init.individual;
@@ -450,7 +451,8 @@ public class HGarterInitEditor : Editor
 								initData.a = (byte)((init.autoSaving == HGarterInit.EnabledDisabled.Enabled) ? 1 : 0);
 								initData.c = (byte)((init.ingameCurrency == HGarterInit.Active.Yes) ? 1 : 0);
 								initData.p = GetProgressMode (init.progressModule.mode);
-								initDataJson = JsonConvert.SerializeObject (initData);
+                                initData.ads = init.ads;
+                                initDataJson = JsonConvert.SerializeObject (initData);
 							}
 								
 							if (Application.isPlaying) {
@@ -505,7 +507,7 @@ public class HGarterInitEditor : Editor
 						}
 						EditorGUILayout.EndHorizontal ();
 						
-					} else {
+			    } else {
 						// ----- basic sdk -----
 						EditorGUILayout.PrefixLabel ("");
 						// feature box
@@ -513,7 +515,11 @@ public class HGarterInitEditor : Editor
 						EditorGUILayout.PropertyField (serializedObject.FindProperty ("featureBox"), true);
 						//init.featureBox.settingsButton = (HGarterInit.BtnVisibility)EditorGUILayout.EnumPopup ("Settings vutton visibility", (HGarterInit.BtnVisibility)init.featureBox.settingsButton);
 						EditorGUILayout.EndHorizontal ();
-						EditorGUILayout.BeginHorizontal ();
+                        // ADS
+                        EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.PropertyField(serializedObject.FindProperty("ads"), true);
+                        EditorGUILayout.EndHorizontal();
+                        EditorGUILayout.BeginHorizontal ();
 						EditorGUILayout.PropertyField (serializedObject.FindProperty ("minimumTimescale"), true);
 						EditorGUILayout.EndHorizontal ();
 						EditorGUILayout.BeginHorizontal ();
@@ -528,13 +534,14 @@ public class HGarterInitEditor : Editor
 								InitBasicMode initData = new InitBasicMode ();
 								initData.m = multiplayer;
 								initData.mt = init.minimumTimescale;
+                                initData.ads = init.ads;
 								Garter.I.ExportData <GarterWWW>(JsonConvert.SerializeObject (initData), callback => ServerCallback (true, callback));
 							} else {
 								Debug.LogError ("Editor must be in play mode to be possible to Export the data.");
 							}
 						}
 						EditorGUILayout.EndHorizontal ();
-					}
+				}
 			}
 		}
 		//end of active / deactive sdk
@@ -587,6 +594,7 @@ public class HGarterInitEditor : Editor
 		public byte a; // auto saving
 		public byte c; // game currency
 		public byte p; // active sdk progress?
+        public AdsConfiguration ads; // ads configuration
 	}
 		
 	[System.Serializable]
@@ -595,7 +603,6 @@ public class HGarterInitEditor : Editor
 		public string ij; // item json
 		public int[] its; // item state
 		public string[] s; // stack data
-
 		public string l; // individual data
 	}
 	[System.Serializable]
@@ -603,5 +610,6 @@ public class HGarterInitEditor : Editor
 	{
 		public bool m; // multiplayer
 		public float mt; // minimal timestamp
-	}
+        public AdsConfiguration ads; // ads configuration
+    }
 }

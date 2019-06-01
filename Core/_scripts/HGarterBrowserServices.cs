@@ -1,10 +1,12 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Collections;
 using System.Runtime.InteropServices;
+using GameArter.Ads;
 
 [HideInInspector]
 public class HGarterBrowserServices {
-
+#if UNITY_WEBGL
 	// javascript browser function initialization
 
 	// init info
@@ -18,7 +20,7 @@ public class HGarterBrowserServices {
 		info.i = interpreter;
 		info.g = gameId;
 		info.p = Application.platform.ToString().ToLower();
-		info.m = multiplayer;  // multiplayer game
+		info.m = multiplayer;  // multiplayer game - useless since ver 3.0
 		info.pv = projectVersion;
 		_gb_initGameSignature(JsonUtility.ToJson (info));
 	}
@@ -33,36 +35,69 @@ public class HGarterBrowserServices {
 	// Ad requests
 	[DllImport("__Internal")]
 	private static extern void _gb_adRequest(string spData);
-	public void AdRequest(int adType, bool mutedGame, string cursorLockState, bool visibleCursor){
-		_gb_adRequest(JsonUtility.ToJson(new SpData(adType, mutedGame, cursorLockState, visibleCursor)));
+	public void AdRequest(AdUnitData adData, Action<string> callback)
+    {
+        if (adData.adType == AdsConfiguration.AdType.Fullscreen)
+        {
+            if (callback != null) Garter.I._AddCatchCbListener<string>(Garter._CachedListener._AdState, callback);
+            if (!adData.editorMode)
+            {
+                _gb_adRequest(JsonUtility.ToJson(new SpData(2, adData.mutedGame, adData.cursorLockState, adData.visibleCursor)));
+            }
+            else
+            {
+                Debug.LogWarning("Ads work after uploading to GameArter and using GameArter gameplayer");
+            }
+        } else {
+            Debug.Log("Only fullscreen ads are supported on web platform");
+            if (callback != null) callback("unsupported");
+        }
 	}
 
 	// Analytics request
 	[DllImport("__Internal")]
 	private static extern void _gb_analyticsRequest(string analyticsData);
 	public void AnalyticsRequest(string mode, string scene, string category, string action, string label, int value){
-		AnalyticsClass analytics = new AnalyticsClass ();
-		analytics.mode = mode;
-		analytics.scene = scene;
-		analytics.category = category;
-		analytics.action = action;
-		analytics.label = label;
-		analytics.value = value;
-		_gb_analyticsRequest (JsonUtility.ToJson(analytics));
+        if (!Garter.I._IsEditorMode())
+        {
+            AnalyticsClass analytics = new AnalyticsClass();
+            analytics.mode = mode;
+            analytics.scene = scene;
+            analytics.category = category;
+            analytics.action = action;
+            analytics.label = label;
+            analytics.value = value;
+            _gb_analyticsRequest(JsonUtility.ToJson(analytics));
+        }
+        else
+        {
+            Debug.Log("[GameArter][Analytics] (info msg) | Posting " + mode + " / " + scene + " / " + category + "/" + action + "/" + label + "/" + value + " to analytics. | NOTE: Feature works in GameArter gameplayer only.");
+        }
 	}
+
+    public void OpenLeaderboardUI(string data){
+        OpenModule(data);
+    }
 
 	// Open browser window (module)
 	[DllImport("__Internal")]
 	private static extern void _gb_openModuleWindow(string data);
 	public void OpenModule(string data){
-		_gb_openModuleWindow(data);
+        _gb_openModuleWindow(data);
 	}
 		
 	// Story animation
 	[DllImport("__Internal")]
 	private static extern void _gb_storyAnimation(int num);
 	public void StoryAnimation(int num){
-		_gb_storyAnimation(num);
+        if (!Garter.I._IsEditorMode())
+        {
+            _gb_storyAnimation(num);
+        }
+        else
+        {
+            Debug.Log("[GameArter] Cutscene " + num + " will be displayed after uploading to GameArter.");
+        }
 	}
 
 	// Story animation
@@ -91,7 +126,15 @@ public class HGarterBrowserServices {
 	[DllImport("__Internal")]
 	private static extern void _gb_gameRestart();
 	public void GameRestart(){
-		_gb_gameRestart();
+        if (!Garter.I._IsEditorMode())
+        {
+            _gb_gameRestart();
+        }
+        else
+        {
+            Debug.Log("[GameArter] GameReload is supported after uploading to gamearter.");
+        }
+        
 	}
 		
 	// Ban
@@ -133,6 +176,8 @@ public class HGarterBrowserServices {
 		_gb_getAdConf ();
 	}
 
+    public void Invite() { }
+
 	// Identification for BrowserSDK
 	[System.Serializable]
 	internal class SdkInitInfo {
@@ -173,4 +218,5 @@ public class HGarterBrowserServices {
 		public string label;
 		public int value;
 	}
+#endif
 }
