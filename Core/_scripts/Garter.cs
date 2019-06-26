@@ -831,7 +831,7 @@ public class Garter : MonoBehaviour {
                                 callback(null, value);
                             return value;
                         } catch (Exception e1) {
-                            Debug.LogWarning("Garter | Parsing failed, defautl value returned");
+                            Debug.LogWarning("Garter | Parsing failed, default value returned");
                             if (callback != null)
                                 callback(e1.ToString(), default(T));
                             return default(T);
@@ -1984,7 +1984,7 @@ public class Garter : MonoBehaviour {
         if (string.IsNullOrEmpty(userPictureUrl))
         {
             userPictureUrl = "https://www.pacogames.com/static/images/anonymous.png";
-            Debug.LogError("[GameArter][Error] empty user picture url");
+            //Debug.LogError("[GameArter][Error] empty user picture url");
         }
         DownloadDataFile(userPictureUrl, FileType.Texture, result => SetUserImage(result));
     }
